@@ -102,20 +102,17 @@ export const createTRPCRouter = t.router;
  * logs.
  */
 
-const generalLoggerMiddleware = t.middleware(async ({ path, type, next }) => {
+export const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
   Logger.info(`🚀 ${type} - ${path}`);
   const start = Date.now();
-  const result = await next();
-  const duration = Date.now() - start;
-  Logger.info(`✅ ${type} - ${path} - ${duration}ms`);
-  return result;
-});
-
-const errorLoggerMiddleware = t.middleware(async ({ path, type, next }) => {
   try {
-    return await next();
+    const result = await next();
+    const duration = Date.now() - start;
+    Logger.info(`✅ ${type} - ${path} - Duración: ${duration}ms`);
+    return result;
   } catch (error) {
-    Logger.error(`❌ ${type} - ${path} - ${error}`);
+    const duration = Date.now() - start;
+    Logger.error(`❌ ${type} - ${path} - Duración: ${duration}ms - Error: ${error}`);
     throw error;
   }
 });
@@ -127,7 +124,7 @@ const errorLoggerMiddleware = t.middleware(async ({ path, type, next }) => {
  * tRPC API. It does not guarantee that a user querying is authorized, but you
  * can still access user session data if they are logged in.
  */
-export const publicProcedure = t.procedure.use(generalLoggerMiddleware).use(errorLoggerMiddleware);
+export const publicProcedure = t.procedure.use(loggerMiddleware);
 
 /**
  * Reusable middleware that enforces users are logged in before running the
@@ -154,7 +151,4 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
  *
  * @see https://trpc.io/docs/procedures
  */
-export const protectedProcedure = t.procedure
-  .use(generalLoggerMiddleware)
-  .use(errorLoggerMiddleware)
-  .use(enforceUserIsAuthed);
+export const protectedProcedure = t.procedure.use(loggerMiddleware).use(enforceUserIsAuthed);
